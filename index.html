@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -20,7 +19,7 @@
         .control-btns { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
         #undo-btn, #next-btn { width: 100%; padding: 15px; font-size: 18px; border-radius: 10px; border: none; cursor: pointer; }
         #undo-btn { background-color: #ff9800; color: white; }
-        #next-btn { background-color: #d3f5d4; color: white; }
+        #next-btn { background-color: #4caf50; color: white; }
         @media (min-width: 600px) { .control-btns { flex-direction: row; } #undo-btn, #next-btn { flex: 1; } }
         #loading-msg { color: #666; font-style: italic; }
     </style>
@@ -32,13 +31,11 @@
     <div id="loading-msg">Đang lấy dữ liệu từ máy chủ...</div>
     <select id="sheet-select" style="display:none;"></select>
     <hr>
-
     <div id="vietnamese-hint">Đang tải...</div>
     <div id="answer-zone"></div>
     <div id="pool"></div>
     <div id="result"></div>
     <div id="extra-hint" style="margin-top: 10px; color: #666; font-style: italic; font-size: 0.9em;"></div>
-    
     <div class="control-btns">
         <button id="undo-btn" onclick="undo()">Hoàn tác (Undo) ↩️</button>
         <button id="next-btn" style="display:none;" onclick="nextQuestion()">Câu tiếp theo ➡️</button>
@@ -49,10 +46,8 @@
     let workbook, currentData = [];
     let correctAnswer = "", userSequence = [];
 
-    // TỰ ĐỘNG CHẠY KHI MỞ TRANG WEB
     window.addEventListener('DOMContentLoaded', () => {
-        const fileName = 'data.xlsx'; // Đảm bảo file này có trên GitHub của bạn
-        
+        const fileName = 'data.xlsx'; 
         fetch(fileName)
             .then(response => {
                 if (!response.ok) throw new Error("Không tìm thấy file " + fileName);
@@ -61,12 +56,10 @@
             .then(data => {
                 const arrayBuffer = new Uint8Array(data);
                 workbook = XLSX.read(arrayBuffer, {type: 'array'});
-                
                 const select = document.getElementById('sheet-select');
                 select.innerHTML = workbook.SheetNames.map(name => `<option value="${name}">${name}</option>`).join('');
                 select.style.display = 'block';
                 document.getElementById('loading-msg').style.display = 'none';
-                
                 loadSheet(workbook.SheetNames[0]);
             })
             .catch(error => {
@@ -82,7 +75,8 @@
 
     function loadSheet(name) {
         const sheet = workbook.Sheets[name];
-        currentData = XLSX.utils.sheet_to_json(sheet, {header: 1}).slice(1, 100);
+        // .slice(1, 51) lấy từ dòng 2 đến dòng 51 trong Excel
+        currentData = XLSX.utils.sheet_to_json(sheet, {header: 1}).slice(1, 51);
         nextQuestion();
     }
 
@@ -93,6 +87,7 @@
         do {
             randomRow = currentData[Math.floor(Math.random() * currentData.length)];
             attempts++;
+            // Thay randomRow[4] (Cột E) thành randomRow[1] (Cột B)
         } while ((!randomRow || !randomRow[1] || randomRow[1].toString().trim() === "") && attempts < 20);
 
         if (!randomRow || !randomRow[1]) {
@@ -106,8 +101,12 @@
         document.getElementById('answer-zone').innerHTML = "";
         userSequence = [];
 
+        // Gợi ý tiếng Việt vẫn lấy ở cột A (index 0)
         document.getElementById('vietnamese-hint').innerText = randomRow[0] || "---";
+        
+        // CÂU TRẢ LỜI ĐÚNG: Đổi từ cột E (4) sang cột B (1)
         correctAnswer = randomRow[1].toString().trim();
+        
         const extraInfo = randomRow[2] || ""; 
         document.getElementById('extra-hint').innerText = extraInfo ? "Gợi ý: " + extraInfo : "";
 
