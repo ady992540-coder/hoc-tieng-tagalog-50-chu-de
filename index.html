@@ -94,23 +94,31 @@
 <script>
     let workbook, currentData = [];
     let correctAnswer = "", userSequence = [];
+ // Thay vì chờ 'change' từ nút upload, chúng ta chạy ngay khi trang web vừa load xong
+    window.onload = () => {
+        const fileName = 'data.xlsx'; // Tên file Excel của bạn
 
-    document.getElementById('upload').addEventListener('change', (e) => {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const data = new Uint8Array(event.target.result);
-            workbook = XLSX.read(data, {type: 'array'});
-            const select = document.getElementById('sheet-select');
-            select.innerHTML = workbook.SheetNames.map(name => `<option value="${name}">${name}</option>`).join('');
-            select.style.display = 'inline-block';
-            loadSheet(workbook.SheetNames[0]);
-        };
-        reader.readAsArrayBuffer(e.target.files[0]);
-    });
-
-    document.getElementById('sheet-select').addEventListener('change', (e) => {
-        loadSheet(e.target.value);
-    });
+        fetch(fileName)
+            .then(response => {
+                if (!response.ok) throw new Error("Không tìm thấy file data.xlsx!");
+                return response.arrayBuffer();
+            })
+            .then(data => {
+                const arrayBuffer = new Uint8Array(data);
+                workbook = XLSX.read(arrayBuffer, {type: 'array'});
+                
+                const select = document.getElementById('sheet-select');
+                select.innerHTML = workbook.SheetNames.map(name => `<option value="${name}">${name}</option>`).join('');
+                select.style.display = 'inline-block';
+                
+                loadSheet(workbook.SheetNames[0]); // Tự động load sheet đầu tiên
+                console.log("Đã kết nối dữ liệu tự động!");
+            })
+            .catch(err => {
+                console.error(err);
+                document.getElementById('vietnamese-hint').innerText = "Lỗi: Không tìm thấy file dữ liệu!";
+            });
+    };
 
     function loadSheet(name) {
         const sheet = workbook.Sheets[name];
