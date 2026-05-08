@@ -3,347 +3,219 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Học tiếng Tagalog cùng Henry</title>
+    <title>Học Tagalog - Bản chuẩn Fix Lỗi</title>
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 10px; text-align: center; background-color: #f0f2f5; margin: 0; }
-        .container { width: 95%; max-width: 600px; margin: 10px auto; background: white; padding: 15px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); box-sizing: border-box; }
-        h2 { font-size: 1.5em; color: #1976D2; margin-bottom: 5px; }
-        .word-btn { padding: 15px 22px; margin: 6px; cursor: pointer; border: none; background: #2196F3; color: white; border-radius: 30px; display: inline-block; font-size: 18px; transition: transform 0.1s; touch-action: manipulation; }
-        .word-btn:active { transform: scale(0.9); background: #0D47A1; }
-        #answer-zone { border: 2px dashed #bbdefb; min-height: 100px; margin: 15px 0; padding: 10px; border-radius: 10px; display: flex; justify-content: center; flex-wrap: wrap; align-items: center; background-color: #fafafa; }
-        #vietnamese-hint { color: #d32f2f; font-size: 1.3em; font-weight: bold; margin-bottom: 15px; }
-        #result { margin-top: 15px; font-weight: bold; font-size: 1.1em; min-height: 1.5em; }
-        .success-text { color: #4caf50; }
-        #sheet-select { width: 100%; padding: 12px; border-radius: 5px; margin: 10px 0; font-size: 16px; }
-        .control-btns { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
-        #undo-btn, #next-btn { width: 100%; padding: 15px; font-size: 18px; border-radius: 10px; border: none; cursor: pointer; }
-        #undo-btn { background-color: #ff9800; color: white; }
-        #next-btn { background-color: #4caf50; color: white; }
+        :root { --primary: #1976D2; --success: #4caf50; --warning: #ff9800; --danger: #f44336; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; padding: 10px; text-align: center; background-color: #f0f2f5; margin: 0; }
+        .container { width: 95%; max-width: 600px; margin: 10px auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); box-sizing: border-box; }
         
-        /* Cài đặt âm thanh */
-        .audio-settings {
-            background: #e3f2fd;
-            padding: 10px;
-            border-radius: 10px;
-            margin: 10px 0;
-            font-size: 0.9em;
-            text-align: left;
-            display: inline-block;
-            width: 100%;
-            box-sizing: border-box;
+        /* Hiệu ứng mờ luyện phản xạ */
+        #vietnamese-hint { 
+            color: #d32f2f; font-size: 1.3em; font-weight: bold; margin: 15px 0; 
+            filter: blur(6px); transition: 0.3s; cursor: help; padding: 10px;
+            border: 1px dashed #ccc; border-radius: 8px;
         }
-        .audio-settings label { display: block; cursor: pointer; margin: 5px 0; color: #1565c0; }
-        
-        .audio-btn {
-            background: #607d8b;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 14px;
-            margin-bottom: 10px;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-        }
-        .audio-btn:hover { background: #455a64; }
+        #vietnamese-hint:hover, #vietnamese-hint:active { filter: blur(0); }
 
-        @media (min-width: 600px) { .control-btns { flex-direction: row; } #undo-btn, #next-btn { flex: 1; } }
-        #loading-msg { color: #666; font-style: italic; }
-        #progress { font-size: 0.9em; color: #888; margin-top: 5px; }
+        .word-btn { padding: 15px 22px; margin: 6px; cursor: pointer; border: none; background: #2196F3; color: white; border-radius: 30px; display: inline-block; font-size: 18px; transition: 0.1s; touch-action: manipulation; }
+        .word-btn:active { transform: scale(0.9); background: #0D47A1; }
+        .word-btn:disabled { opacity: 0.4; cursor: default; background: #90caf9 !important; }
+        
+        #answer-zone { border: 2px dashed #bbdefb; min-height: 100px; margin: 15px 0; padding: 10px; border-radius: 10px; display: flex; justify-content: center; flex-wrap: wrap; align-items: center; background-color: #fafafa; }
+        #pool { display: flex; justify-content: center; flex-wrap: wrap; margin-bottom: 10px; }
+        
+        #result { margin-top: 10px; font-weight: bold; font-size: 1.1em; min-height: 1.5em; }
+        .success-text { color: var(--success); }
+        .error-text { color: var(--danger); }
+        
+        .control-btns { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
+        #undo-btn, #next-btn, #reset-btn { width: 100%; padding: 15px; font-size: 18px; border-radius: 10px; border: none; cursor: pointer; font-weight: bold; }
+        #undo-btn { background-color: var(--warning); color: white; }
+        #next-btn { background-color: var(--success); color: white; }
+        #reset-btn { background-color: #78909c; color: white; margin-top: 10px; }
+        
+        .audio-settings { background: #e3f2fd; padding: 10px; border-radius: 10px; margin: 10px 0; text-align: left; font-size: 0.9em; }
+        .audio-btn { background: #607d8b; color: white; border: none; padding: 10px 20px; border-radius: 25px; cursor: pointer; margin-bottom: 10px; }
+
+        #summary-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9em; }
+        #summary-table th, #summary-table td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        #summary-table th { background-color: var(--primary); color: white; }
+        @media (min-width: 600px) { .control-btns { flex-direction: row; } }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>Xếp Câu Tagalog</h2>
-    <div id="loading-msg">Đang lấy dữ liệu từ máy chủ...</div>
-    <select id="sheet-select" style="display:none;"></select>
-    <div id="progress">Câu số: 0/0</div>
-    <hr>
+<div class="container" id="game-ui">
+    <h2 id="title-app">Xếp Câu Tagalog</h2>
+    <select id="sheet-select" style="display:none; width: 100%; margin-bottom: 10px;"></select>
+    <div id="progress">Đang tải dữ liệu...</div>
 
     <div class="audio-settings">
-        <strong>Chế độ phát âm tự động:</strong>
-        <label><input type="radio" name="audio-mode" value="before"> 1. Đọc TRƯỚC khi xếp câu</label>
-        <label><input type="radio" name="audio-mode" value="after" checked> 2. Đọc SAU khi xếp đúng</label>
-        <label><input type="radio" name="audio-mode" value="none"> 3. Tắt tự động (Bấm loa thủ công)</label>
+        <strong>Chế độ:</strong>
+        <label><input type="radio" name="audio-mode" value="before" checked> Nghe trước (Luyện phản xạ)</label>
+        <label style="margin-left:10px;"><input type="radio" name="audio-mode" value="after"> Nghe sau</label>
     </div>
     
-    <div id="vietnamese-hint">Đang tải...</div>
-    <button class="audio-btn" onclick="speakTagalog()">Nghe phát âm 🔊</button>
+    <div id="vietnamese-hint">---</div>
+    <button class="audio-btn" onclick="speakTagalog()">Nghe âm thanh 🔊</button>
 
     <div id="answer-zone"></div>
     <div id="pool"></div>
     <div id="result"></div>
-    <div id="extra-hint" style="margin-top: 10px; color: #666; font-style: italic; font-size: 0.9em;"></div>
     
     <div class="control-btns">
         <button id="undo-btn" onclick="undo()">Hoàn tác (Undo) ↩️</button>
         <button id="next-btn" style="display:none;" onclick="nextQuestion()">Câu tiếp theo ➡️</button>
     </div>
+    <button id="reset-btn" onclick="manualReset()">Làm lại câu này (Reset) 🔄</button>
+</div>
+
+<div class="container" id="summary-ui" style="display:none;">
+    <h2>📊 Kết Quả Phản Xạ</h2>
+    <div id="final-stats" style="margin-bottom: 15px; font-weight: bold;"></div>
+    <table id="summary-table">
+        <thead><tr><th>STT</th><th>Thời gian</th><th>Đánh giá</th></tr></thead>
+        <tbody id="summary-body"></tbody>
+    </table>
+    <button style="margin-top:20px; background: var(--primary); color: white; padding: 15px; width:100%; border-radius:10px; border:none;" onclick="location.reload()">Luyện tập lại 🔄</button>
 </div>
 
 <script>
-    let workbook, currentData = [];
-    let correctAnswer = "", userSequence = [];
-    let currentIndex = 0;
-    let voices = []; // Biến lưu danh sách giọng nói
-
-    // 1. HÀM NẠP GIỌNG NÓI (Cực kỳ quan trọng)
-    function loadVoices() {
-        voices = window.speechSynthesis.getVoices();
-        if (voices.length > 0) {
-            console.log("Đã nạp thành công " + voices.length + " giọng nói.");
-        }
-    }
-
-    // Lắng nghe sự kiện khi trình duyệt đã sẵn sàng các giọng nói
-    if (window.speechSynthesis.onvoiceschanged !== undefined) {
-        window.speechSynthesis.onvoiceschanged = loadVoices;
-    }
-
-
+    let workbook, currentData = [], currentIndex = 0;
+    let correctAnswer = "", userSequence = [], wordsArray = [];
+    let startTime, sessionResults = [];
 
     function speakTagalog() {
         if (!correctAnswer) return;
         window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(correctAnswer);
+        const utter = new SpeechSynthesisUtterance(correctAnswer);
         const voices = window.speechSynthesis.getVoices();
-
-        // CHIẾN THUẬT TÌM GIỌNG THÔNG MINH:
-        const targetVoice = 
-            voices.find(v => v.name.includes('Blessing')) || // Ưu tiên 1: Blessing (nếu dùng Edge mobile)
-            voices.find(v => v.name.includes('Google')) ||   // Ưu tiên 2: Giọng Google (trên Android)
-            voices.find(v => v.lang.includes('tl-PH')) ||    // Ưu tiên 3: Bất cứ giọng Tagalog nào
-            voices.find(v => v.lang.includes('fil-PH'));    // Ưu tiên 4: Bất cứ giọng Filipino nào
-
-        if (targetVoice) {
-            utterance.voice = targetVoice;
-        } else {
-            utterance.lang = 'tl-PH'; // Mặc định nếu không tìm thấy tên cụ thể
-        }
-
-        utterance.rate = 0.9;
-        window.speechSynthesis.speak(utterance);
-    }
-
-
-// 2. TRONG HÀM nextQuestion()
-function nextQuestion() {
-    if (!currentData || currentData.length === 0) return;
-
-    if (currentIndex >= currentData.length) {
-        currentIndex = 0;
-        alert("Bạn đã hoàn thành 50 câu! Chúng ta sẽ bắt đầu lại nhé.");
-    }
-
-    let randomRow = currentData[currentIndex];
-    
-    document.getElementById('progress').innerText = `Câu số: ${currentIndex + 1} / ${currentData.length}`;
-    document.getElementById('next-btn').style.display = 'none';
-    document.getElementById('undo-btn').style.display = 'block';
-    document.getElementById('result').innerText = "";
-    document.getElementById('answer-zone').innerHTML = "";
-    userSequence = [];
-
-    document.getElementById('vietnamese-hint').innerText = randomRow[0] || "---";
-
-    // Gán câu hoàn chỉnh vào biến correctAnswer ngay từ đầu
-    correctAnswer = (randomRow[1] || "").toString().trim();
-    
-    const extraInfo = randomRow[2] || ""; 
-    document.getElementById('extra-hint').innerText = extraInfo ? "Gợi ý: " + extraInfo : "";
-
-    if (correctAnswer === "") {
-        currentIndex++; 
-        nextQuestion();
-        return;
-    }
-
-    // Tách từ để làm nút bấm (không làm thay đổi biến correctAnswer)
-    let wordsForButtons = correctAnswer.replace(/[.,?!]/g, "").split(" ").filter(w => w !== "");
-    let shuffled = [...wordsForButtons].sort(() => Math.random() - 0.5);
-
-    const pool = document.getElementById('pool');
-    pool.innerHTML = "";
-    shuffled.forEach(word => {
-        const btn = document.createElement('button');
-        btn.className = 'word-btn';
-        btn.innerText = word;
-        btn.onclick = () => {
-            userSequence.push(word);
-            document.getElementById('answer-zone').appendChild(btn);
-            btn.disabled = true;
-            btn.style.opacity = "0.3";
-            checkResult(wordsForButtons); // Kiểm tra dựa trên mảng từ đúng
-        };
-        pool.appendChild(btn);
-    });
-
-    // Chế độ đọc TRƯỚC: Máy sẽ đọc câu hoàn chỉnh từ biến correctAnswer
-    if (getAudioMode() === "before") {
-        setTimeout(speakTagalog, 600);
-    }
-
-    currentIndex++;
-}
-
-
-
-
-
-
-
-
-    // Hàm lấy giá trị chế độ âm thanh hiện tại
-    function getAudioMode() {
-        return document.querySelector('input[name="audio-mode"]:checked').value;
+        const target = voices.find(v => v.lang.includes('tl-PH') || v.lang.includes('fil-PH')) || voices.find(v => v.name.includes('Google'));
+        if (target) utter.voice = target;
+        utter.lang = 'tl-PH';
+        utter.rate = 0.9;
+        window.speechSynthesis.speak(utter);
     }
 
     window.addEventListener('DOMContentLoaded', () => {
-        const fileName = 'data.xlsx'; 
-        fetch(fileName)
-            .then(response => {
-                if (!response.ok) throw new Error("Không tìm thấy file " + fileName);
-                return response.arrayBuffer();
-            })
-            .then(data => {
-                const arrayBuffer = new Uint8Array(data);
-                workbook = XLSX.read(arrayBuffer, {type: 'array'});
-                const select = document.getElementById('sheet-select');
-                select.innerHTML = workbook.SheetNames.map(name => `<option value="${name}">${name}</option>`).join('');
-                select.style.display = 'block';
-                document.getElementById('loading-msg').style.display = 'none';
-                loadSheet(workbook.SheetNames[0]);
-            })
-            .catch(error => {
-                console.error(error);
-                document.getElementById('vietnamese-hint').innerText = "Lỗi: " + error.message;
-                document.getElementById('loading-msg').innerText = "Vui lòng kiểm tra lại file!";
-            });
+        fetch('data.xlsx').then(res => res.arrayBuffer()).then(data => {
+            workbook = XLSX.read(new Uint8Array(data), {type: 'array'});
+            const s = document.getElementById('sheet-select');
+            s.innerHTML = workbook.SheetNames.map(n => `<option value="${n}">${n}</option>`).join('');
+            s.style.display = 'block';
+            loadSheet(workbook.SheetNames[0]);
+        }).catch(() => document.getElementById('progress').innerText = "Vui lòng kiểm tra file data.xlsx!");
     });
 
-    document.getElementById('sheet-select').addEventListener('change', (e) => {
-        loadSheet(e.target.value);
-    });
+    document.getElementById('sheet-select').onchange = (e) => loadSheet(e.target.value);
 
     function loadSheet(name) {
-        const sheet = workbook.Sheets[name];
-        currentData = XLSX.utils.sheet_to_json(sheet, {header: 1}).slice(1, 51);
-        currentIndex = 0; 
+        currentData = XLSX.utils.sheet_to_json(workbook.Sheets[name], {header: 1}).slice(1, 51);
+        currentIndex = 0; sessionResults = [];
         nextQuestion();
     }
 
     function nextQuestion() {
-        if (!currentData || currentData.length === 0) return;
-
-        if (currentIndex >= currentData.length) {
-            currentIndex = 0;
-            alert("Bạn đã hoàn thành 50 câu! Chúng ta sẽ bắt đầu lại từ đầu nhé.");
-        }
-
-        let randomRow = currentData[currentIndex];
+        if (currentIndex >= currentData.length) { showSummary(); return; }
+        const row = currentData[currentIndex];
         
-        document.getElementById('progress').innerText = `Câu số: ${currentIndex + 1} / ${currentData.length}`;
+        document.getElementById('progress').innerText = `Câu: ${currentIndex + 1} / ${currentData.length}`;
         document.getElementById('next-btn').style.display = 'none';
         document.getElementById('undo-btn').style.display = 'block';
         document.getElementById('result').innerText = "";
         document.getElementById('answer-zone').innerHTML = "";
         userSequence = [];
 
-        document.getElementById('vietnamese-hint').innerText = randomRow[0] || "---";
-        correctAnswer = (randomRow[1] || "").toString().trim();
+        document.getElementById('vietnamese-hint').innerText = row[0] || "---";
+        correctAnswer = (row[1] || "").toString().trim();
+        wordsArray = correctAnswer.replace(/[.,?!]/g, "").split(" ").filter(w => w !== "");
         
-        const extraInfo = randomRow[2] || ""; 
-        document.getElementById('extra-hint').innerText = extraInfo ? "Gợi ý: " + extraInfo : "";
-
-        if (correctAnswer === "") {
-            currentIndex++; 
-            nextQuestion();
-            return;
+        renderPool([...wordsArray].sort(() => Math.random() - 0.5));
+        
+        if (document.querySelector('input[name="audio-mode"]:checked').value === "before") {
+            setTimeout(speakTagalog, 500);
         }
+        startTime = Date.now();
+    }
 
-        let words = correctAnswer.replace(/[.,?!]/g, "").split(" ").filter(w => w !== "");
-        let shuffled = [...words].sort(() => Math.random() - 0.5);
-
-        const pool = document.getElementById('pool');
-        pool.innerHTML = "";
-        shuffled.forEach(word => {
-            const btn = document.createElement('button');
-            btn.className = 'word-btn';
-            btn.innerText = word;
-            btn.onclick = () => {
-                userSequence.push(word);
-                document.getElementById('answer-zone').appendChild(btn);
-                btn.disabled = true;
-                btn.style.opacity = "0.3";
-                checkResult(words);
+    function renderPool(words) {
+        const p = document.getElementById('pool');
+        p.innerHTML = "";
+        words.forEach(w => {
+            const b = document.createElement('button');
+            b.className = 'word-btn';
+            b.innerText = w;
+            b.onclick = () => {
+                userSequence.push(w);
+                document.getElementById('answer-zone').appendChild(b);
+                b.disabled = true; // Khóa nút sau khi nhấn
+                checkResult();
             };
-            pool.appendChild(btn);
+            p.appendChild(b);
         });
+    }
 
-        // CHỨC NĂNG 1: Tự động đọc TRƯỚC khi xếp câu
-        if (getAudioMode() === "before") {
-            setTimeout(speakTagalog, 600);
+    function checkResult() {
+        if (userSequence.length === wordsArray.length) {
+            const isCorrect = userSequence.join(" ").toLowerCase() === wordsArray.join(" ").toLowerCase();
+            if (isCorrect) {
+                const dur = ((Date.now() - startTime) / 1000).toFixed(2);
+                sessionResults.push(dur);
+                document.getElementById('result').innerHTML = `<span class="success-text">Chính xác! (${dur}s) 🎉</span>`;
+                document.getElementById('next-btn').style.display = 'block';
+                document.getElementById('undo-btn').style.display = 'none';
+                if (document.querySelector('input[name="audio-mode"]:checked').value === "after") speakTagalog();
+                currentIndex++;
+            } else {
+                document.getElementById('result').innerHTML = `<span class="error-text">Chưa đúng, hãy nhấn Hoàn tác hoặc Reset.</span>`;
+            }
+        } else {
+            document.getElementById('result').innerText = ""; 
         }
-
-        currentIndex++;
     }
 
     function undo() {
         if (userSequence.length === 0) return;
+        
+        // 1. Lấy từ cuối cùng ra khỏi mảng dữ liệu
         userSequence.pop();
-        const answerZone = document.getElementById('answer-zone');
-        const lastBtn = answerZone.lastElementChild;
+        
+        // 2. Lấy nút cuối cùng trong vùng Answer Zone
+        const zone = document.getElementById('answer-zone');
+        const lastBtn = zone.lastElementChild;
+        
         if (lastBtn) {
+            // 3. Đưa nút trở lại Pool
             document.getElementById('pool').appendChild(lastBtn);
+            // 4. Mở khóa nút để có thể nhấn lại
             lastBtn.disabled = false;
-            lastBtn.style.opacity = "1";
+            // 5. Xóa thông báo lỗi (nếu có)
             document.getElementById('result').innerText = "";
         }
     }
 
-    function checkResult(originalWordsArray) {
-        if (userSequence.length === originalWordsArray.length) {
-            if (userSequence.join(" ").toLowerCase() === originalWordsArray.join(" ").toLowerCase()) {
-                document.getElementById('result').innerHTML = "<span class='success-text'>Chính xác! Magaling! 🎉</span>";
-                document.getElementById('next-btn').style.display = 'block';
-                document.getElementById('undo-btn').style.display = 'none';
-                
-                // CHỨC NĂNG 2: Tự động đọc SAU khi xếp đúng
-                if (getAudioMode() === "after") {
-                    setTimeout(speakTagalog, 500);
-                }
-            } else {
-                document.getElementById('result').innerHTML = "<span style='color:red'>Chưa đúng rồi! Đang reset...</span>";
-                setTimeout(() => resetCurrentQuestion(originalWordsArray), 1200);
-            }
-        }
+    function manualReset() {
+        userSequence = [];
+        document.getElementById('result').innerText = "";
+        document.getElementById('answer-zone').innerHTML = "";
+        // Vẽ lại kho từ với thứ tự ngẫu nhiên mới
+        renderPool([...wordsArray].sort(() => Math.random() - 0.5));
     }
 
-    function resetCurrentQuestion(originalWordsArray) {
-        document.getElementById('answer-zone').innerHTML = "";
-        document.getElementById('result').innerText = "";
-        document.getElementById('undo-btn').style.display = 'block';
-        userSequence = [];
-        let shuffled = [...originalWordsArray].sort(() => Math.random() - 0.5);
-        const pool = document.getElementById('pool');
-        pool.innerHTML = "";
-        shuffled.forEach(word => {
-            const btn = document.createElement('button');
-            btn.className = 'word-btn';
-            btn.innerText = word;
-            btn.onclick = () => {
-                userSequence.push(word);
-                document.getElementById('answer-zone').appendChild(btn);
-                btn.disabled = true;
-                btn.style.opacity = "0.3";
-                checkResult(originalWordsArray);
-            };
-            pool.appendChild(btn);
+    function showSummary() {
+        document.getElementById('game-ui').style.display = 'none';
+        document.getElementById('summary-ui').style.display = 'block';
+        const tbody = document.getElementById('summary-body');
+        tbody.innerHTML = "";
+        let total = 0;
+        sessionResults.forEach((t, i) => {
+            total += parseFloat(t);
+            let rank = t < 5 ? "Bản năng ⚡" : (t < 10 ? "Thành thạo ✅" : "Đang học 📚");
+            tbody.innerHTML += `<tr><td>${i+1}</td><td>${t}s</td><td>${rank}</td></tr>`;
         });
+        const avg = (total / sessionResults.length).toFixed(2);
+        document.getElementById('final-stats').innerHTML = `Tốc độ trung bình: <strong>${avg}s / câu</strong>`;
     }
 </script>
 </body>
