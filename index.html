@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -22,6 +20,36 @@
         #undo-btn, #next-btn { width: 100%; padding: 15px; font-size: 18px; border-radius: 10px; border: none; cursor: pointer; }
         #undo-btn { background-color: #ff9800; color: white; }
         #next-btn { background-color: #4caf50; color: white; }
+        
+        /* Cài đặt âm thanh */
+        .audio-settings {
+            background: #e3f2fd;
+            padding: 10px;
+            border-radius: 10px;
+            margin: 10px 0;
+            font-size: 0.9em;
+            text-align: left;
+            display: inline-block;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .audio-settings label { display: block; cursor: pointer; margin: 5px 0; color: #1565c0; }
+        
+        .audio-btn {
+            background: #607d8b;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-bottom: 10px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .audio-btn:hover { background: #455a64; }
+
         @media (min-width: 600px) { .control-btns { flex-direction: row; } #undo-btn, #next-btn { flex: 1; } }
         #loading-msg { color: #666; font-style: italic; }
         #progress { font-size: 0.9em; color: #888; margin-top: 5px; }
@@ -35,11 +63,22 @@
     <select id="sheet-select" style="display:none;"></select>
     <div id="progress">Câu số: 0/0</div>
     <hr>
+
+    <div class="audio-settings">
+        <strong>Chế độ phát âm tự động:</strong>
+        <label><input type="radio" name="audio-mode" value="before"> 1. Đọc TRƯỚC khi xếp câu</label>
+        <label><input type="radio" name="audio-mode" value="after" checked> 2. Đọc SAU khi xếp đúng</label>
+        <label><input type="radio" name="audio-mode" value="none"> 3. Tắt tự động (Bấm loa thủ công)</label>
+    </div>
+    
     <div id="vietnamese-hint">Đang tải...</div>
+    <button class="audio-btn" onclick="speakTagalog()">Nghe phát âm 🔊</button>
+
     <div id="answer-zone"></div>
     <div id="pool"></div>
     <div id="result"></div>
     <div id="extra-hint" style="margin-top: 10px; color: #666; font-style: italic; font-size: 0.9em;"></div>
+    
     <div class="control-btns">
         <button id="undo-btn" onclick="undo()">Hoàn tác (Undo) ↩️</button>
         <button id="next-btn" style="display:none;" onclick="nextQuestion()">Câu tiếp theo ➡️</button>
@@ -49,7 +88,119 @@
 <script>
     let workbook, currentData = [];
     let correctAnswer = "", userSequence = [];
-    let currentIndex = 0; // BIẾN ĐẾM ĐỂ CHẠY THEO THỨ TỰ
+    let currentIndex = 0;
+    let voices = []; // Biến lưu danh sách giọng nói
+
+    // 1. HÀM NẠP GIỌNG NÓI (Cực kỳ quan trọng)
+    function loadVoices() {
+        voices = window.speechSynthesis.getVoices();
+        if (voices.length > 0) {
+            console.log("Đã nạp thành công " + voices.length + " giọng nói.");
+        }
+    }
+
+    // Lắng nghe sự kiện khi trình duyệt đã sẵn sàng các giọng nói
+    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+
+
+
+    function speakTagalog() {
+        if (!correctAnswer) return;
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(correctAnswer);
+        const voices = window.speechSynthesis.getVoices();
+
+        // CHIẾN THUẬT TÌM GIỌNG THÔNG MINH:
+        const targetVoice = 
+            voices.find(v => v.name.includes('Blessing')) || // Ưu tiên 1: Blessing (nếu dùng Edge mobile)
+            voices.find(v => v.name.includes('Google')) ||   // Ưu tiên 2: Giọng Google (trên Android)
+            voices.find(v => v.lang.includes('tl-PH')) ||    // Ưu tiên 3: Bất cứ giọng Tagalog nào
+            voices.find(v => v.lang.includes('fil-PH'));    // Ưu tiên 4: Bất cứ giọng Filipino nào
+
+        if (targetVoice) {
+            utterance.voice = targetVoice;
+        } else {
+            utterance.lang = 'tl-PH'; // Mặc định nếu không tìm thấy tên cụ thể
+        }
+
+        utterance.rate = 0.9;
+        window.speechSynthesis.speak(utterance);
+    }
+
+
+// 2. TRONG HÀM nextQuestion()
+function nextQuestion() {
+    if (!currentData || currentData.length === 0) return;
+
+    if (currentIndex >= currentData.length) {
+        currentIndex = 0;
+        alert("Bạn đã hoàn thành 50 câu! Chúng ta sẽ bắt đầu lại nhé.");
+    }
+
+    let randomRow = currentData[currentIndex];
+    
+    document.getElementById('progress').innerText = `Câu số: ${currentIndex + 1} / ${currentData.length}`;
+    document.getElementById('next-btn').style.display = 'none';
+    document.getElementById('undo-btn').style.display = 'block';
+    document.getElementById('result').innerText = "";
+    document.getElementById('answer-zone').innerHTML = "";
+    userSequence = [];
+
+    document.getElementById('vietnamese-hint').innerText = randomRow[0] || "---";
+
+    // Gán câu hoàn chỉnh vào biến correctAnswer ngay từ đầu
+    correctAnswer = (randomRow[1] || "").toString().trim();
+    
+    const extraInfo = randomRow[2] || ""; 
+    document.getElementById('extra-hint').innerText = extraInfo ? "Gợi ý: " + extraInfo : "";
+
+    if (correctAnswer === "") {
+        currentIndex++; 
+        nextQuestion();
+        return;
+    }
+
+    // Tách từ để làm nút bấm (không làm thay đổi biến correctAnswer)
+    let wordsForButtons = correctAnswer.replace(/[.,?!]/g, "").split(" ").filter(w => w !== "");
+    let shuffled = [...wordsForButtons].sort(() => Math.random() - 0.5);
+
+    const pool = document.getElementById('pool');
+    pool.innerHTML = "";
+    shuffled.forEach(word => {
+        const btn = document.createElement('button');
+        btn.className = 'word-btn';
+        btn.innerText = word;
+        btn.onclick = () => {
+            userSequence.push(word);
+            document.getElementById('answer-zone').appendChild(btn);
+            btn.disabled = true;
+            btn.style.opacity = "0.3";
+            checkResult(wordsForButtons); // Kiểm tra dựa trên mảng từ đúng
+        };
+        pool.appendChild(btn);
+    });
+
+    // Chế độ đọc TRƯỚC: Máy sẽ đọc câu hoàn chỉnh từ biến correctAnswer
+    if (getAudioMode() === "before") {
+        setTimeout(speakTagalog, 600);
+    }
+
+    currentIndex++;
+}
+
+
+
+
+
+
+
+
+    // Hàm lấy giá trị chế độ âm thanh hiện tại
+    function getAudioMode() {
+        return document.querySelector('input[name="audio-mode"]:checked').value;
+    }
 
     window.addEventListener('DOMContentLoaded', () => {
         const fileName = 'data.xlsx'; 
@@ -70,7 +221,7 @@
             .catch(error => {
                 console.error(error);
                 document.getElementById('vietnamese-hint').innerText = "Lỗi: " + error.message;
-                document.getElementById('loading-msg').innerText = "Vui lòng kiểm tra lại file trên GitHub!";
+                document.getElementById('loading-msg').innerText = "Vui lòng kiểm tra lại file!";
             });
     });
 
@@ -80,16 +231,14 @@
 
     function loadSheet(name) {
         const sheet = workbook.Sheets[name];
-        // Lấy từ hàng 2 đến 51 (tương ứng chỉ số 1 đến 50 trong mảng)
         currentData = XLSX.utils.sheet_to_json(sheet, {header: 1}).slice(1, 51);
-        currentIndex = 0; // Reset về câu đầu tiên khi đổi sheet
+        currentIndex = 0; 
         nextQuestion();
     }
 
     function nextQuestion() {
         if (!currentData || currentData.length === 0) return;
 
-        // KIỂM TRA NẾU HẾT DỮ LIỆU THÌ QUAY LẠI TỪ ĐẦU
         if (currentIndex >= currentData.length) {
             currentIndex = 0;
             alert("Bạn đã hoàn thành 50 câu! Chúng ta sẽ bắt đầu lại từ đầu nhé.");
@@ -97,25 +246,21 @@
 
         let randomRow = currentData[currentIndex];
         
-        // Hiển thị số thứ tự câu cho người dùng dễ theo dõi
         document.getElementById('progress').innerText = `Câu số: ${currentIndex + 1} / ${currentData.length}`;
-
         document.getElementById('next-btn').style.display = 'none';
         document.getElementById('undo-btn').style.display = 'block';
         document.getElementById('result').innerText = "";
         document.getElementById('answer-zone').innerHTML = "";
         userSequence = [];
 
-        // Tiếng Việt ở cột A (0)
         document.getElementById('vietnamese-hint').innerText = randomRow[0] || "---";
-        // Tiếng Tagalog ở cột B (1)
         correctAnswer = (randomRow[1] || "").toString().trim();
         
         const extraInfo = randomRow[2] || ""; 
         document.getElementById('extra-hint').innerText = extraInfo ? "Gợi ý: " + extraInfo : "";
 
         if (correctAnswer === "") {
-            currentIndex++; // Nếu dòng trống, tự động nhảy sang câu tiếp theo
+            currentIndex++; 
             nextQuestion();
             return;
         }
@@ -139,7 +284,11 @@
             pool.appendChild(btn);
         });
 
-        // Tăng chỉ số để lần sau gọi nextQuestion sẽ ra câu tiếp theo
+        // CHỨC NĂNG 1: Tự động đọc TRƯỚC khi xếp câu
+        if (getAudioMode() === "before") {
+            setTimeout(speakTagalog, 600);
+        }
+
         currentIndex++;
     }
 
@@ -162,6 +311,11 @@
                 document.getElementById('result').innerHTML = "<span class='success-text'>Chính xác! Magaling! 🎉</span>";
                 document.getElementById('next-btn').style.display = 'block';
                 document.getElementById('undo-btn').style.display = 'none';
+                
+                // CHỨC NĂNG 2: Tự động đọc SAU khi xếp đúng
+                if (getAudioMode() === "after") {
+                    setTimeout(speakTagalog, 500);
+                }
             } else {
                 document.getElementById('result').innerHTML = "<span style='color:red'>Chưa đúng rồi! Đang reset...</span>";
                 setTimeout(() => resetCurrentQuestion(originalWordsArray), 1200);
@@ -191,82 +345,6 @@
             pool.appendChild(btn);
         });
     }
-</script>
-<!-- Code injected by live-server -->
-<script>
-	// <![CDATA[  <-- For SVG support
-	if ('WebSocket' in window) {
-		(function () {
-			function refreshCSS() {
-				var sheets = [].slice.call(document.getElementsByTagName("link"));
-				var head = document.getElementsByTagName("head")[0];
-				for (var i = 0; i < sheets.length; ++i) {
-					var elem = sheets[i];
-					var parent = elem.parentElement || head;
-					parent.removeChild(elem);
-					var rel = elem.rel;
-					if (elem.href && typeof rel != "string" || rel.length == 0 || rel.toLowerCase() == "stylesheet") {
-						var url = elem.href.replace(/(&|\?)_cacheOverride=\d+/, '');
-						elem.href = url + (url.indexOf('?') >= 0 ? '&' : '?') + '_cacheOverride=' + (new Date().valueOf());
-					}
-					parent.appendChild(elem);
-				}
-			}
-			var protocol = window.location.protocol === 'http:' ? 'ws://' : 'wss://';
-			var address = protocol + window.location.host + window.location.pathname + '/ws';
-			var socket = new WebSocket(address);
-			socket.onmessage = function (msg) {
-				if (msg.data == 'reload') window.location.reload();
-				else if (msg.data == 'refreshcss') refreshCSS();
-			};
-			if (sessionStorage && !sessionStorage.getItem('IsThisFirstTime_Log_From_LiveServer')) {
-				console.log('Live reload enabled.');
-				sessionStorage.setItem('IsThisFirstTime_Log_From_LiveServer', true);
-			}
-		})();
-	}
-	else {
-		console.error('Upgrade your browser. This Browser is NOT supported WebSocket for Live-Reloading.');
-	}
-	// ]]>
-</script>
-<!-- Code injected by live-server -->
-<script>
-	// <![CDATA[  <-- For SVG support
-	if ('WebSocket' in window) {
-		(function () {
-			function refreshCSS() {
-				var sheets = [].slice.call(document.getElementsByTagName("link"));
-				var head = document.getElementsByTagName("head")[0];
-				for (var i = 0; i < sheets.length; ++i) {
-					var elem = sheets[i];
-					var parent = elem.parentElement || head;
-					parent.removeChild(elem);
-					var rel = elem.rel;
-					if (elem.href && typeof rel != "string" || rel.length == 0 || rel.toLowerCase() == "stylesheet") {
-						var url = elem.href.replace(/(&|\?)_cacheOverride=\d+/, '');
-						elem.href = url + (url.indexOf('?') >= 0 ? '&' : '?') + '_cacheOverride=' + (new Date().valueOf());
-					}
-					parent.appendChild(elem);
-				}
-			}
-			var protocol = window.location.protocol === 'http:' ? 'ws://' : 'wss://';
-			var address = protocol + window.location.host + window.location.pathname + '/ws';
-			var socket = new WebSocket(address);
-			socket.onmessage = function (msg) {
-				if (msg.data == 'reload') window.location.reload();
-				else if (msg.data == 'refreshcss') refreshCSS();
-			};
-			if (sessionStorage && !sessionStorage.getItem('IsThisFirstTime_Log_From_LiveServer')) {
-				console.log('Live reload enabled.');
-				sessionStorage.setItem('IsThisFirstTime_Log_From_LiveServer', true);
-			}
-		})();
-	}
-	else {
-		console.error('Upgrade your browser. This Browser is NOT supported WebSocket for Live-Reloading.');
-	}
-	// ]]>
 </script>
 </body>
 </html>
